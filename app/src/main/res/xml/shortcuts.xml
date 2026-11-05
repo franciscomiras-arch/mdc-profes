@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut android:shortcutId="horario" android:enabled="true"
+      android:icon="@drawable/ic_sc_horario" android:shortcutShortLabel="@string/sc_horario">
+    <intent android:action="android.intent.action.VIEW"
+        android:targetPackage="es.iesmdc.profes"
+        android:targetClass="es.iesmdc.profes.ScheduleActivity" />
+  </shortcut>
+  <shortcut android:shortcutId="nuevo" android:enabled="true"
+      android:icon="@drawable/ic_sc_add" android:shortcutShortLabel="@string/sc_nuevo">
+    <intent android:action="es.iesmdc.profes.ADD_LINK"
+        android:targetPackage="es.iesmdc.profes"
+        android:targetClass="es.iesmdc.profes.MainActivity" />
+  </shortcut>
+</shortcuts>

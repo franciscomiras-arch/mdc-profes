@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">MdC Profes</string>
+  <string name="sc_horario">Mi horario</string>
+  <string name="sc_nuevo">Añadir enlace</string>
+</resources>
