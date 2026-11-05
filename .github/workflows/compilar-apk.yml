@@ -19,44 +19,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - id: java
+        continue-on-error: true
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - id: android
+        continue-on-error: true
+        uses: android-actions/setup-android@v3
 
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Preparar clave de firma
-        if: env.KEYSTORE_B64 != ''
-        run: echo "$KEYSTORE_B64" | base64 -d > app/release.jks
-
-      - name: Compilar
+      - id: firma
+        name: Preparar clave de firma
+        continue-on-error: true
         run: |
+          mkdir -p salida
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "Sin secreto KEYSTORE_B64: se firma con clave temporal" >> salida/FIRMA.txt
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_B64" | tr -d ' \r\n\t' | base64 -d > app/release.jks || true
+          ALIAS="${MDC_KEY_ALIAS:-mdc}"
+          if keytool -list -keystore app/release.jks -storepass "$MDC_STORE_PASSWORD" -alias "$ALIAS" >/dev/null 2>salida/keytool.txt; then
+            echo "Clave del centro valida (alias $ALIAS)" >> salida/FIRMA.txt
+          else
+            echo "La clave o la contrasena de los secretos no son validas: se firma con clave temporal" >> salida/FIRMA.txt
+            rm -f app/release.jks
+          fi
+
+      - id: compilar
+        name: Compilar
+        continue-on-error: true
+        run: |
+          mkdir -p salida
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon --stacktrace assembleRelease 2>&1 | tee salida/build.log
 
       - name: Preparar resultado
         if: always()
         run: |
           mkdir -p salida
-          cp build.log salida/ 2>/dev/null || true
-          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
-            cp app/build/outputs/apk/release/app-release.apk salida/MdCProfes.apk
-            if [ -f app/release.jks ]; then echo "Firmado con la clave del centro" > salida/FIRMA.txt; else echo "Firmado con clave temporal de depuracion" > salida/FIRMA.txt; fi
+          {
+            echo "java: ${{ steps.java.outcome }}"
+            echo "android: ${{ steps.android.outcome }}"
+            echo "firma: ${{ steps.firma.outcome }}"
+            echo "compilar: ${{ steps.compilar.outcome }}"
+          } > salida/PASOS.txt
+          APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            cp "$APK" salida/MdCProfes.apk
             echo "OK" > salida/ESTADO.txt
           else
             echo "ERROR" > salida/ESTADO.txt
           fi
           echo "${{ github.sha }}" > salida/COMMIT.txt
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: MdCProfes-APK
-          path: salida/
 
       - name: Publicar en la rama apk
         if: always()
@@ -68,3 +86,10 @@ jobs:
           git add -A
           git commit -q -m "Compilacion ${{ github.run_number }}"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" apk
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: MdCProfes-APK
+          path: salida/
