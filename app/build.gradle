@@ -43,6 +43,8 @@ android {
 }
 
 dependencies {
+  // Alinea las librerías de Kotlin que traen las dependencias (evita clases duplicadas)
+  implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
   implementation 'androidx.activity:activity:1.9.3'       // selector de fotos y resultados de actividad
   implementation 'androidx.browser:browser:1.8.0'         // Custom Tabs
   implementation 'androidx.core:core:1.13.1'              // FileProvider, insets
